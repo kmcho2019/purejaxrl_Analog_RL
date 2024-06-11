@@ -15,7 +15,7 @@ from pathlib import Path
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Replace 0 with your GPU ID
-
+print('Test: os.environ["CUDA_VISIBLE_DEVICES"] = "0" executed')
 
 # ROOT_DIR = os.getcwd()
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -34,9 +34,9 @@ from typing import Sequence, NamedTuple, Any
 from flax.training.train_state import TrainState
 import distrax
 from wrappers import (
-    GymnaxWrapper,
+#    GymnaxWrapper, # commented out as it is not used
     LogWrapper,
-    BraxGymnaxWrapper,
+#    BraxGymnaxWrapper, # commented out as it is not used
     VecEnv,
     NormalizeVecObservation,
     NormalizeVecReward,
@@ -341,10 +341,10 @@ def preprocess_train_config(cfg, config_dict):
 
 @hydra.main(config_name="config", config_path="./cfg")
 def launch_rlg_hydra(cfg: DictConfig):
-
-
-    time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    run_name = f"{cfg.wandb_name}_{time_str}"
+    print('Debug: launch_rlg_hydra executed')
+    print(cfg)
+    #time_str = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    #run_name = f"{cfg.wandb_name}_{time_str}"
 
     # ensure checkpoints can be specified as relative paths
     if cfg.checkpoint:
@@ -364,6 +364,8 @@ def launch_rlg_hydra(cfg: DictConfig):
     # Save the environment code!
     try:
         output_file = f"{ROOT_DIR}/tasks/{cfg.task.env.env_name.lower()}.py"
+        gymnax_path = os.path.dirname(gymnax.__file__)
+        output_file = os.path.join(gymnax_path, "environments", "custom", f"{cfg.task.env.env_name.lower()}.py")
         shutil.copy(output_file, f"env.py")
     except:
         import re
@@ -371,7 +373,8 @@ def launch_rlg_hydra(cfg: DictConfig):
             s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
             return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
         output_file = f"{ROOT_DIR}/tasks/{camel_to_snake(cfg.task.name)}.py"
-
+        gymnax_path = os.path.dirname(gymnax.__file__)
+        output_file = os.path.join(gymnax_path, "environments", "custom", f"{camel_to_snake(cfg.task.name)}.py")
         shutil.copy(output_file, f"env.py")
 
 
@@ -409,13 +412,13 @@ def launch_rlg_hydra(cfg: DictConfig):
     'VF_COEF': 0.5822412408290565, 
     'MAX_GRAD_NORM': 0.42710241041977387, 
     'ACTIVATION': 'tanh',
-    "ENV_NAME": "TwoStageOTA-custom",
+    "ENV_NAME": "TwoStageOTAGPT-custom",
     "ANNEAL_LR": True,
     "NORMALIZE_ENV": True,
     "DEBUG": True,
     }
     rng = jax.random.PRNGKey(30)
-    train_jit = jax.jit(make_train(config))
+    train_jit = jax.jit(make_train(jax_train_config))
     import time
     rng = jax.random.PRNGKey(42)
     t0 = time.time()
@@ -453,6 +456,7 @@ def launch_rlg_hydra(cfg: DictConfig):
         wandb.finish()
         
 if __name__ == "__main__":
+    print('Debug: jax_train.py executed')
     launch_rlg_hydra()
 
 
