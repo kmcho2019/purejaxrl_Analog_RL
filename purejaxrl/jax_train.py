@@ -415,7 +415,7 @@ def launch_rlg_hydra(cfg: DictConfig):
     "ENV_NAME": "TwoStageOTAGPT-custom",
     "ANNEAL_LR": True,
     "NORMALIZE_ENV": True,
-    "DEBUG": True,
+    "DEBUG": False, # True # Changed to False because setting this to True pollutes the env_iter*_response*.txt with too much information
     }
     rng = jax.random.PRNGKey(30)
     train_jit = jax.jit(make_train(jax_train_config))
@@ -433,6 +433,7 @@ def launch_rlg_hydra(cfg: DictConfig):
     # Iterate through the attribute names 'x0' to 'x15'
     best_sample_gate_config = []
     best_sample_gate_config_dict = {}
+    best_sample_gate_config_dict_denorm = {}
     for i in range(16):
         # Construct the attribute name
         attr_name = f"x{i}"
@@ -441,14 +442,20 @@ def launch_rlg_hydra(cfg: DictConfig):
         value = getattr(out_runner_env.env_state.env_state.env_state, attr_name)[best_index]
         
         # Print the attribute in the desired format
-        print(f'{attr_name}: {value}')
+        #print(f'{attr_name}: {value}')
         best_sample_gate_config_dict[attr_name] = value
         best_sample_gate_config.append(value)
+    env, env_params = gymnax.make(jax_train_config["ENV_NAME"])
+    denorm_states = env.deNorm_action(best_sample_gate_config, env_params)
 
+    for i in range(16):
+        print(f'x{i}: {denorm_states[i]}')
+        best_sample_gate_config_dict_denorm[f'x{i}'] = denorm_states[i]
     
     statistics = {
         'best_reward': best_reward,
         'best_sample_gate_config_dict': best_sample_gate_config_dict,
+        'best_sample_gate_config_dict_denorm': best_sample_gate_config_dict_denorm,
     }
 
 
@@ -458,6 +465,7 @@ def launch_rlg_hydra(cfg: DictConfig):
 if __name__ == "__main__":
     print('Debug: jax_train.py executed')
     launch_rlg_hydra()
+    print('Finished running jax_train.py')
 
 
 
