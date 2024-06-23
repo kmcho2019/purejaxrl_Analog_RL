@@ -9,7 +9,7 @@ from hydra.utils import to_absolute_path
 #from isaacgymenvs.tasks import isaacgym_task_map
 from omegaconf import DictConfig, OmegaConf
 #import gym
-import sys 
+import sys
 import shutil
 from pathlib import Path
 
@@ -360,7 +360,7 @@ def launch_rlg_hydra(cfg: DictConfig):
 
 
 
-    
+
     # Save the environment code!
     try:
         output_file = f"{ROOT_DIR}/tasks/{cfg.task.env.env_name.lower()}.py"
@@ -382,7 +382,7 @@ def launch_rlg_hydra(cfg: DictConfig):
     if cfg.wandb_activate and rank ==0 :
 
         import wandb
-        
+
         # initialize wandb only once per horovod run (or always for non-horovod runs)
 
     # dump config dict
@@ -399,18 +399,18 @@ def launch_rlg_hydra(cfg: DictConfig):
     # convert CLI arguments into dictionary
     # create runner and set the settings
     jax_train_config = { # best config so far found from optuna_hpsearch_ppo.py
-    'LR': 0.00044574140508460696, 
+    'LR': 0.00044574140508460696,
     "NUM_ENVS": 4096,#2048,
-    'NUM_STEPS': 15, 
+    'NUM_STEPS': 15,
     "TOTAL_TIMESTEPS": 409600 * 60,#5e7,
-    'UPDATE_EPOCHS': 4, 
-    'NUM_MINIBATCHES': 64, 
-    'GAMMA': 0.9719202527669172, 
-    'GAE_LAMBDA': 0.9361494624548591, 
-    'CLIP_EPS': 0.2874919405095487, 
-    'ENT_COEF': 2.1685069159216622e-05, 
-    'VF_COEF': 0.5822412408290565, 
-    'MAX_GRAD_NORM': 0.42710241041977387, 
+    'UPDATE_EPOCHS': 4,
+    'NUM_MINIBATCHES': 64,
+    'GAMMA': 0.9719202527669172,
+    'GAE_LAMBDA': 0.9361494624548591,
+    'CLIP_EPS': 0.2874919405095487,
+    'ENT_COEF': 2.1685069159216622e-05,
+    'VF_COEF': 0.5822412408290565,
+    'MAX_GRAD_NORM': 0.42710241041977387,
     'ACTIVATION': 'tanh',
     "ENV_NAME": "TwoStageOTAGPT-custom",
     "ANNEAL_LR": True,
@@ -430,17 +430,24 @@ def launch_rlg_hydra(cfg: DictConfig):
     print('best reward', best_reward)
     best_index = np.argmax(out_runner_env.env_state.env_state.returned_episode_returns)
     print('best index', best_index)
+    # 99th percentile or top 1 % value
+    top_1_val = np.percentile(out_runner_env.env_state.env_state.returned_episode_returns, 10)
+    top_1_val_index = (np.where(out_runner_env.env_state.env_state.returned_episode_returns >= top_1_val)[0])[len((np.where(out_runner_env.env_state.env_state.returned_episode_returns >= top_1_val)[0])) // 2]
+    print('top 1 % value', top_1_val)
+    print('top 1 % index', top_1_val_index)
     # Iterate through the attribute names 'x0' to 'x15'
     best_sample_gate_config = []
     best_sample_gate_config_dict = {}
     best_sample_gate_config_dict_denorm = {}
+    # using best_index seems to have it get stuck in a local minimum
+    best_index = top_1_val_index
     for i in range(16):
         # Construct the attribute name
         attr_name = f"x{i}"
-        
+
         # Use getattr to fetch the attribute from the env_state.env_state object
         value = getattr(out_runner_env.env_state.env_state.env_state, attr_name)[best_index]
-        
+
         # Print the attribute in the desired format
         #print(f'{attr_name}: {value}')
         best_sample_gate_config_dict[attr_name] = value
@@ -451,7 +458,7 @@ def launch_rlg_hydra(cfg: DictConfig):
     for i in range(16):
         print(f'x{i}: {denorm_states[i]}')
         best_sample_gate_config_dict_denorm[f'x{i}'] = denorm_states[i]
-    
+
     statistics = {
         'best_reward': best_reward,
         'best_sample_gate_config_dict': best_sample_gate_config_dict,
@@ -461,7 +468,7 @@ def launch_rlg_hydra(cfg: DictConfig):
 
     if cfg.wandb_activate and rank == 0:
         wandb.finish()
-        
+
 if __name__ == "__main__":
     print('Debug: jax_train.py executed')
     launch_rlg_hydra()
